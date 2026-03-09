@@ -3,3 +3,5 @@ obj/
 .vscode/
 *.log
 appsettings.Development.json
+bin/
+obj/
