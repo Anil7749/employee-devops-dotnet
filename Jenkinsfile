@@ -5,7 +5,7 @@ pipeline {
         AWS_ACCOUNT_ID = '533267129063'
         ECR_REPO       = 'employee-webapp'
         ECS_CLUSTER    = 'employee-webapp-cluster'
-        ECS_SERVICE    = 'employee-webapp-service'
+        ECS_SERVICE    = 'employee-wedapp-service'
         ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         IMAGE_TAG      = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
         FULL_IMAGE     = "${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
