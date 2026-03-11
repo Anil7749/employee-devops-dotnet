@@ -18,11 +18,9 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 echo "Branch    : ${env.GIT_BRANCH}"
                 echo "Commit    : ${env.GIT_COMMIT}"
                 echo "Image tag : ${IMAGE_TAG}"
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             }
         }
 
@@ -31,7 +29,7 @@ pipeline {
                 sh """
                     docker build -t ${FULL_IMAGE} .
                     docker tag ${FULL_IMAGE} ${ECR_REGISTRY}/${ECR_REPO}:latest
-                    echo "✅ Image built: ${FULL_IMAGE}"
+                    echo "Image built: ${FULL_IMAGE}"
                 """
             }
         }
@@ -39,7 +37,6 @@ pipeline {
         stage('Trivy Security Scan') {
             steps {
                 sh """
-                    # Install Trivy if not already installed
                     if ! command -v trivy &> /dev/null; then
                         echo "Installing Trivy..."
                         sudo apt-get install -y wget apt-transport-https gnupg
@@ -51,16 +48,12 @@ pipeline {
                         sudo apt-get install -y trivy
                     fi
 
-                    echo "🔍 Running Trivy scan on: ${FULL_IMAGE}"
-
-                    # Scan and show results — CRITICAL and HIGH only
                     trivy image \
                         --severity CRITICAL,HIGH \
                         --no-progress \
                         --format table \
                         ${FULL_IMAGE}
 
-                    # Save full report as artifact
                     trivy image \
                         --severity CRITICAL,HIGH,MEDIUM \
                         --no-progress \
@@ -68,7 +61,7 @@ pipeline {
                         --output trivy-report.json \
                         ${FULL_IMAGE}
 
-                    echo "✅ Trivy scan complete — check report above"
+                    echo "Trivy scan complete"
                 """
             }
         }
@@ -84,7 +77,7 @@ pipeline {
                     docker push ${FULL_IMAGE}
                     docker push ${ECR_REGISTRY}/${ECR_REPO}:latest
 
-                    echo "✅ Pushed to ECR: ${FULL_IMAGE}"
+                    echo "Pushed to ECR: ${FULL_IMAGE}"
                 """
             }
         }
@@ -98,8 +91,8 @@ pipeline {
                         --force-new-deployment \
                         --region          ${AWS_REGION}
 
-                    echo "✅ ECS deployment triggered"
-                    echo "📦 Image: ${FULL_IMAGE}"
+                    echo "ECS deployment triggered"
+                    echo "Image: ${FULL_IMAGE}"
                 """
             }
         }
@@ -107,25 +100,13 @@ pipeline {
 
     post {
         success {
-            echo """
-            ══════════════════════════════════════════
-            ✅  PIPELINE SUCCESS — TBD + IAM Role
-            📦  Image   : ${FULL_IMAGE}
-            🌿  Branch  : ${env.GIT_BRANCH}
-            🚀  Cluster : ${ECS_CLUSTER}
-            ⚙️   Service : ${ECS_SERVICE}
-            ══════════════════════════════════════════
-            """
+            echo "PIPELINE SUCCESS - Image: ${FULL_IMAGE}"
         }
         failure {
-            echo "❌ PIPELINE FAILED — scroll up to find which stage failed"
+            echo "PIPELINE FAILED - scroll up to find which stage failed"
         }
         always {
-            // Archive Trivy report as build artifact
-            archiveArtifacts artifacts: 'trivy-report.json', \
-                             allowEmptyArchive: true
-
-            // Clean up local docker images
+            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
             sh "docker rmi ${FULL_IMAGE} || true"
             sh "docker rmi ${ECR_REGISTRY}/${ECR_REPO}:latest || true"
         }
